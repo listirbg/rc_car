@@ -9,11 +9,17 @@ import network
 import espnow
 
 
+# ### Mac-Adressen
+mac_controller = b'\x88\x13\xbfq\xc1\xcc'
+mac_car = b'\xac\x15\x18\xe9\x98H'
+
+
 # ### Initialisieren von ESP-Now
 
 # WLAN aktivieren
 sta = network.WLAN(network.STA_IF)
 sta.active(True)
+sta.config(pm=sta.PM_NONE)
 
 # ESP-NOW initialisieren
 en = espnow.ESPNow()
@@ -26,7 +32,6 @@ en.active(True)
 def set_esc_motor_speed(output: PWM, speed: int) -> None:
     # Begrenze den Wert auf -100 bis 100
     speed = max(-100, min(100, speed))
-    speed = speed * 0.2
 
     # Ansteuerung Motor
     # Periodendauer 20 ms (= 50 Hz)
@@ -56,6 +61,24 @@ def set_servo_angle(output: PWM, possible_angle: int, min_angle: int, max_angle:
     output.duty_ns(pwm_speed_ns)
 
 
+# Empfangene Nachricht in Dict umwandeln
+def convert_msg(message: str) -> dict[str, int]:
+    message = str(message)
+    # Einzelne Werte aufteilen
+    message_table = message.split(",")
+
+    message_dict = dict()
+
+    # Werte in Bezeichnung und Wert aufteilen
+    for obj in message_table:
+        part = obj.split(":")
+        key = part[0].strip("b'")
+        value = int(part[1].strip("'"))
+        message_dict[key] = value
+
+    return message_dict
+
+
 # ### Ein-/Ausgänge definieren
 
 # Motor (PWM Frequenz 50 Hz)
@@ -69,14 +92,17 @@ pwm_servo = PWM(Pin(pin_servo), freq=50, duty_ns=1_500_000)
 
 # ### Main-Loop
 while True:
+    # Alten Wert aus Variable msg löschen
+    msg = None
+
     # Werte über ESP-Now empfangen
     host, msg = en.recv()
-    print(msg)
 
-    # Motor ansteuern
-    motor_speed = int(msg)
+    # Motorgeschwindigkeit und Lenkwinkel festlegen
+    values_dict = convert_msg(msg)
+    motor_speed = values_dict['throttle']
+    servo_angle = values_dict['angle']
+
+    # Motor und Servo ansteuern
     set_esc_motor_speed(pwm_motor, motor_speed)
-
-    # Servo ansteuern
-    servo_angle = int(msg)
     set_servo_angle(pwm_servo, 180, 70, 110, servo_angle)

@@ -126,6 +126,26 @@ Lautsprecher zur Wiedergabe von Soundeffekten
 - Siehe git history
 
 
+## Woche 7 (KW49: 02.12. - 08.12.2024)
+
+### Aktivitäten:
+- Bodenplatte bearbeitet damit Motor richtig sitzt (alle)
+- Abdeckung der Welle modelliert (Timo Weber)
+- Abdeckung der Welle 3D-gedruckt und montiert (alle)
+- Lenkachse montiert (alle)
+- Controller Gehäuse gedruckt (alle)
+- Controller Platine gelötet (Marcel List)
+- Joystick Aufsätze und Ein/Aus-Button modelliert (Timo Weber)
+- Software geschrieben (Marcel List)
+
+### Probleme und Lösungen:
+- Spannungsregler auf Platine funktioniert nicht -> Spannungsregler in anderer Ausrichtung angelötet
+- Lautsprecher im Controller funktioniert nicht -> Fehler muss gesucht werden
+
+### Code:
+- Siehe git history
+
+
 ## Quellen:
 - Programmierung Micropython: https://docs.micropython.org/en/latest/esp32/quickref.html#
 - ESP-Now: https://docs.micropython.org/en/latest/library/espnow.html
