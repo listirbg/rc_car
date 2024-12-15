@@ -25,6 +25,9 @@ sta.config(pm=sta.PM_NONE)
 en = espnow.ESPNow()
 en.active(True)
 
+# Empfänger hinzufügen
+en.add_peer(mac_controller)
+
 
 # ### Funktionen definieren
 
@@ -92,6 +95,8 @@ pwm_servo = PWM(Pin(pin_servo), freq=50, duty_ns=1_500_000)
 
 # ### Main-Loop
 while True:
+    # Nachricht zum Ermitteln der Verbindungsstärke
+    en.send(mac_controller, "SYN")
     # Alten Wert aus Variable msg löschen
     msg = None
 

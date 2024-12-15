@@ -139,8 +139,33 @@ Lautsprecher zur Wiedergabe von Soundeffekten
 - Software geschrieben (Marcel List)
 
 ### Probleme und Lösungen:
-- Spannungsregler auf Platine funktioniert nicht -> Spannungsregler in anderer Ausrichtung angelötet
-- Lautsprecher im Controller funktioniert nicht -> Fehler muss gesucht werden
+- Spannungsregler auf Platine funktioniert nicht → Spannungsregler in anderer Ausrichtung angelötet
+- Lautsprecher im Controller funktioniert nicht → Fehler muss gesucht werden
+
+### Code:
+- Siehe git history
+
+
+## Woche 8 (KW50: 09.12. - 15.12.2024)
+
+### Aktivitäten:
+- Widerstände auf Platine tauschen (Marcel List)
+- Joystick Aufsätze und Ein/Aus-Button 3D-gedruckt und montiert (alle)
+- Software erweitert und optimiert (Marcel List)
+- neue Lenkachse modelliert (Timo Weber)
+- Abdeckung LEDs am Controller modelliert (Timo Weber)
+- Karosserie modelliert (Timo Weber)
+- Abdeckung der Welle optimiert (Timo Weber)
+- Karosserie und Abdeckung der Welle 3D-gedruckt (alle)
+
+### Probleme und Lösungen:
+- beide LEDs der Ladezustandsanzeige leuchten → Vorwiderstände erhöht, LED leuchtet aber noch immer leicht
+Problem ist der zu geringe Widerstand der Ausgänge vom Laderegler, Pull-Up-Widerstände würden das Problem lösen,
+sind aber auf der Platine nicht mehr umsetzbar
+- ESP32 startet nicht, wenn der Controller geladen wird → Anschluss des STDBY-Pins des Ladereglers auf GPIO12
+verhindert Booten, Pull-Down-Widerständ würde das Problem lösen, ist aber auf der Platine nicht umsetzbar
+→ Controller kann während dem Laden nicht genutzt werden bzw. muss vorher eingeschaltet werden
+- Lautsprecher im Controller funktioniert nicht → time.sleep_us() statt time.sleep()
 
 ### Code:
 - Siehe git history
@@ -156,6 +181,7 @@ Lautsprecher zur Wiedergabe von Soundeffekten
 - Schaltung zum Laden des Akkus vom Controller: https://easyeda.com/editor#id=19d85904554e4ffea163c9be46c52993
 - Ansteuerung Motor über ESC: https://www.mikrocontroller.net/topic/354528
 - Startup-Sound: https://pixabay.com/sound-effects/lambo-start-up-sound-26364/
+
 
 ### Chat-GPT Prompts:
 - Wiedergabe von Sounds:
