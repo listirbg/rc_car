@@ -7,11 +7,12 @@
 from machine import Pin, PWM
 import network
 import espnow
+from time import sleep
 
 
 # ### Mac-Adressen
 mac_controller = b'\x88\x13\xbfq\xc1\xcc'
-mac_car = b'\xac\x15\x18\xe9\x98H'
+mac_car = b'\xa0\xb7e-\xc4\xc4'
 
 
 # ### Initialisieren von ESP-Now
@@ -86,6 +87,8 @@ def convert_msg(message: str) -> dict[str, int]:
 
 # Motor (PWM Frequenz 50 Hz)
 pin_motor = 12
+motor = Pin(pin_motor, Pin.OUT, value=0)
+sleep(1)
 pwm_motor = PWM(Pin(pin_motor), freq=50, duty_ns=1_500_000)
 
 # Servo (PWM Frequenz 50 Hz)

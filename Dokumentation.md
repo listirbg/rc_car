@@ -171,6 +171,31 @@ verhindert Booten, Pull-Down-Widerständ würde das Problem lösen, ist aber auf
 - Siehe git history
 
 
+## Woche 9 (KW51: 16.12. - 22.12.2024)
+
+### Aktivitäten:
+- Karosserie modelliert (Timo Weber)
+- Karosserie 3D-gedruckt (alle)
+- neue Lenkachse 3D-gedruckt und montiert (Timo Weber)
+- Software erweitert und optimiert (Marcel List)
+- Aufkleber auf Controller und Karosserie angebracht (Timo Weber)
+- Test-Fahrten (alle)
+- ESC eingestellt (alle)
+- Platine Auto gelötet (Timo Weber)
+- Lösung ESC Probleme suchen (Marcel List)
+
+### Probleme und Lösungen:
+- Verschaltung der Buttons auf der Platine fehlerhaft → korrekte Pins mit extra Drähten auf Eingang ESP gelötet
+- gedruckte Karosserie passt nicht → 3D-Modell angepasst und neu gedruckt
+- Ansteuerung Motor funktioniert nach falschem Anstecken nicht mehr →
+Ausgangssignal mit Oszilloskop gemessen, Ausgang defekt, anderen ESP verwendet
+- Ansteuerung Motor funktioniert noch immer nicht →
+Software Workaround bei Initialisierung PWM-Pin
+
+### Code:
+- Siehe git history
+
+
 ## Quellen:
 - Programmierung Micropython: https://docs.micropython.org/en/latest/esp32/quickref.html#
 - ESP-Now: https://docs.micropython.org/en/latest/library/espnow.html
@@ -189,7 +214,7 @@ verhindert Booten, Pull-Down-Widerständ würde das Problem lösen, ist aber auf
 Bitte gib mir ein Codebeispiel in Micropython mit dem ich eine MP3-Datei über den DAC des ESP auf dem Lautsprecher
 am Verstärker ausgeben kann, ohne eine SD-Karte zu verwenden
 
-- Fehlersuche Motoransteuerung:
+- Fehlersuche Motoransteuerung mit H-Brücke:
 
 Wir steuern einen DC Brushed Motor über eine DRV8871 H-Brücke an, der Motor läuft sogar bei maximalem PWM-Signal nicht
 ohne Anschubsen an, was kann die Ursache sein?
@@ -198,3 +223,8 @@ ohne Anschubsen an, was kann die Ursache sein?
 
 Wie kann ich ein einfaches Logo in den passenden Micropython-Code umwandeln, um es auf meinem I2C-OLED
 mit SH1106-Treiber anzuzeigen?
+
+- Fehlersuche ESC Brushless Motor
+
+Was kann es bedeuten, wenn der ESC unseres Brushless DC Motors immer wieder piept
+und der Motor nicht funktioniert?

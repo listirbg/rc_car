@@ -12,13 +12,9 @@ import espnow
 import time
 
 
-# Pin 12 für Boot auf Pull Down
-Pin(12, Pin.IN, Pin.PULL_DOWN)
-
-
 # ### Mac-Adressen
 mac_controller = b'\x88\x13\xbfq\xc1\xcc'
-mac_car = b'\xac\x15\x18\xe9\x98H'
+mac_car = b'\xa0\xb7e-\xc4\xc4'
 
 
 # ### ESP-NOW initialisieren
@@ -94,6 +90,15 @@ def play_sound(output: DAC, output_mute: Pin, sound: str, sample_rate: int = 800
     sound_mute.value(0)
 
 
+# Auswertung Button
+def button_check(button: Pin, last_state: bool) -> tuple[bool, bool]:
+    state = True if not bool(button.value()) else False
+    if state and state != last_state:
+        return (True, state)
+    else:
+        return (False, state)
+
+
 # ### Ein-/Ausgänge definieren
 
 # Display SH1106 OLED (I2C)
@@ -103,19 +108,19 @@ oled = sh1106.SH1106_I2C(128, 64, i2c, rotate=180)
 # Steuerung
 # Joystick Gas
 joystick_throttle = ADC(34)
-joystick_throttle_button = Pin(19, Pin.IN, Pin.PULL_UP)
+joystick_throttle_button = Pin(4, Pin.IN, Pin.PULL_UP)
 joystick_angle = ADC(35)
-joystick_angle_button = Pin(18, Pin.IN, Pin.PULL_UP)
+joystick_angle_button = Pin(23, Pin.IN, Pin.PULL_UP)
 
 # Audio-Verstärker
-sound_left_channel = DAC(25)  # nicht verwendet
+# sound_left_channel = DAC(25)  # nicht verwendet, da kein Lautsprecher angeschlossen
 sound_right_channel = DAC(26)
 sound_mute = Pin(16, Pin.OUT)
 sound_shutdown = Pin(17, Pin.OUT, value=1)
 
 # Laderegler
-charger_charging = Pin(14, Pin.IN, Pin.PULL_UP)
-charger_standby = Pin(12, Pin.IN, Pin.PULL_UP)
+# charger_charging = Pin(14, Pin.IN, Pin.PULL_UP)  # Keine Verwendung
+# charger_standby = Pin(12, Pin.IN, Pin.PULL_UP)  # Keine Verwendung
 
 
 # ### Programmablauf
@@ -127,18 +132,41 @@ show_logo(oled, 0)
 play_sound(sound_right_channel, sound_mute, "startup.raw")
 
 # Null-Werte definieren
+joystick_angle_button_flank = (False, False)
+joystick_throttle_button_flank = (False, False)
+speed_mode = 0
 send_val_throttle = 32
 send_val_angle = 32
 
+# Geschwindigkeitsmodi
+speed_modes = [0.1, 0.25, 0.5, 0.75, 1]
 
 # ### Main-Loop
 while True:
+    # Buttons auswerten
+    joystick_angle_button_flank = button_check(joystick_angle_button, joystick_angle_button_flank[1])
+    joystick_throttle_button_flank = button_check(joystick_throttle_button, joystick_throttle_button_flank[1])
+
+    # Fahrmodi umschalten
+    if joystick_angle_button_flank[0] and speed_mode < len(speed_modes) - 1:
+        speed_mode += 1
+    elif joystick_angle_button_flank[0] and speed_mode == len(speed_modes) - 1:
+        speed_mode = 0
+
+    max_throttle = speed_modes[speed_mode]
+
     # Werte einlesen
-    send_val_throttle = read_input_calc(joystick_throttle, send_val_throttle, 2, True)
-    send_val_angle = read_input_calc(joystick_angle, send_val_angle, 2, False)
+    val_throttle = read_input_calc(joystick_throttle, send_val_throttle, 3, True)
+    send_val_throttle = int(val_throttle * max_throttle)
+    if 0 < send_val_throttle < 5:
+        send_val_throttle = 5
+    elif -5 < send_val_throttle < 0:
+        send_val_throttle = -5
+
+    send_val_angle = read_input_calc(joystick_angle, send_val_angle, 3, False)
 
     # Werte an RC-Car senden
-    send_text = f"throttle:{send_val_throttle},angle:{send_val_angle}"
+    send_text = f"throttle:{int(send_val_throttle)},angle:{send_val_angle}"
     en.send(mac_car, str(send_text), True)
 
     # Signalstärke überwachen
@@ -148,11 +176,11 @@ while True:
     if mac_car in peers_table:
         #  0 .. 60: sehr gut, 61 .. 69: gut, 70 .. 78: ausreichend
         peer_signal_strength = -(peers_table[mac_car][0])
-        if 0 <= peer_signal_strength <= 60:
+        if 0 <= peer_signal_strength <= 69:
             pic_signal = pictures.connection_3_16x16()
-        elif 61 <= peer_signal_strength <= 69:
+        elif 70 <= peer_signal_strength <= 79:
             pic_signal = pictures.connection_2_16x16()
-        elif 70 <= peer_signal_strength <= 78:
+        elif 80 <= peer_signal_strength <= 85:
             pic_signal = pictures.connection_1_16x16()
         else:
             pic_signal = pictures.connection_0_16x16()
@@ -163,10 +191,9 @@ while True:
     oled.fill(0)
 
     # Fahrmodus max. Geschwindigkeit
-    fb_tacho_max = framebuf.FrameBuffer(pictures.tacho_max_20x18(), 20, 18, framebuf.MONO_VLSB)
-    oled.blit(fb_tacho_max, 1, 1)
-    oled.text(f"100 %", 25, 8, 1)
-    # oled.text(f"{max_throttle:3} %", 22, 1, 1)
+    fb_tacho_max = framebuf.FrameBuffer(pictures.tacho_max_20x20(), 20, 20, framebuf.MONO_VLSB)
+    oled.blit(fb_tacho_max, 0, 0)
+    oled.text(f"{100*max_throttle:3} %", 22, 5, 1)
 
     # Verbindung
     fb_connection = framebuf.FrameBuffer(pic_signal, 16, 16, framebuf.MONO_VLSB)
@@ -174,7 +201,7 @@ while True:
 
     # Aktuelle Geschwindigkeit
     fb_tacho = framebuf.FrameBuffer(pictures.tacho_30x30(), 30, 30, framebuf.MONO_VLSB)
-    oled.blit(fb_tacho_max, 32, 32)
-    oled.text(f"{send_val_throttle:4} %", 55, 38, 1)
+    oled.blit(fb_tacho, 30, 28)
+    oled.text(f"{val_throttle:4} %", 64, 40, 1)
 
     oled.show()
