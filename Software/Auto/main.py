@@ -9,7 +9,6 @@ import network
 import espnow
 from time import sleep
 
-
 # ### Mac-Adressen
 mac_controller = b'\x88\x13\xbfq\xc1\xcc'
 mac_car = b'\xa0\xb7e-\xc4\xc4'
@@ -18,6 +17,7 @@ mac_car = b'\xa0\xb7e-\xc4\xc4'
 # ### Initialisieren von ESP-Now
 
 # WLAN aktivieren
+network.phy_mode(network.MODE_11N)
 sta = network.WLAN(network.STA_IF)
 sta.active(True)
 sta.config(pm=sta.PM_NONE)
@@ -25,6 +25,7 @@ sta.config(pm=sta.PM_NONE)
 # ESP-NOW initialisieren
 en = espnow.ESPNow()
 en.active(True)
+en.config(timeout_ms=300)
 
 # Empfänger hinzufügen
 en.add_peer(mac_controller)
@@ -96,21 +97,36 @@ pin_servo = 14
 pwm_servo = PWM(Pin(pin_servo), freq=50, duty_ns=1_500_000)
 
 
+# ### Programmablauf
+
+# Standardwerte definieren
+connection = False
+motor_speed = 0
+servo_angle = 0
+
+
 # ### Main-Loop
 while True:
-    # Nachricht zum Ermitteln der Verbindungsstärke
-    en.send(mac_controller, "SYN")
-    # Alten Wert aus Variable msg löschen
-    msg = None
+    # Senden und Empfangen probieren
+    try:
+        # Nachricht zum Ermitteln der Verbindungsstärke
+        send_response = en.send(mac_controller, "SYN", True)
+        if not send_response:
+            raise Exception("Error sending data")
 
-    # Werte über ESP-Now empfangen
-    host, msg = en.recv()
+        # Werte über ESP-Now empfangen
+        host, msg = en.recv()
 
-    # Motorgeschwindigkeit und Lenkwinkel festlegen
-    values_dict = convert_msg(msg)
-    motor_speed = values_dict['throttle']
-    servo_angle = values_dict['angle']
-
-    # Motor und Servo ansteuern
-    set_esc_motor_speed(pwm_motor, motor_speed)
-    set_servo_angle(pwm_servo, 180, 70, 110, servo_angle)
+        # Motorgeschwindigkeit und Lenkwinkel festlegen
+        if host == mac_controller:
+            values_dict = convert_msg(str(msg))
+            motor_speed = values_dict['gas']
+            servo_angle = values_dict['angle']
+    # Bei fehlgeschlagener Verbindung
+    except Exception as e:
+        motor_speed = 0
+        servo_angle = 0
+    finally:
+        # Motor und Servo ansteuern
+        set_esc_motor_speed(pwm_motor, motor_speed)
+        set_servo_angle(pwm_servo, 180, 70, 110, servo_angle)

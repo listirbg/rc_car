@@ -3,7 +3,7 @@
 # ######################
 
 # ### Modul-Imports
-from machine import Pin, I2C, ADC, DAC
+from machine import Pin, I2C, ADC, DAC, Timer
 import sh1106
 import pictures
 import framebuf
@@ -20,6 +20,7 @@ mac_car = b'\xa0\xb7e-\xc4\xc4'
 # ### ESP-NOW initialisieren
 
 # WLAN aktivieren
+network.phy_mode(network.MODE_11N)
 sta = network.WLAN(network.STA_IF)
 sta.active(True)
 sta.config(pm=sta.PM_NONE)
@@ -27,6 +28,7 @@ sta.config(pm=sta.PM_NONE)
 # ESP-NOW initialisieren
 en = espnow.ESPNow()
 en.active(True)
+en.config(timeout_ms=300)
 
 # Empfänger hinzufügen
 en.add_peer(mac_car)
@@ -137,71 +139,91 @@ joystick_throttle_button_flank = (False, False)
 speed_mode = 0
 send_val_throttle = 32
 send_val_angle = 32
+connection = False
+timer_connection = 0
+first_cycle = True
 
 # Geschwindigkeitsmodi
 speed_modes = [0.1, 0.25, 0.5, 0.75, 1]
 
+
 # ### Main-Loop
 while True:
-    # Buttons auswerten
-    joystick_angle_button_flank = button_check(joystick_angle_button, joystick_angle_button_flank[1])
-    joystick_throttle_button_flank = button_check(joystick_throttle_button, joystick_throttle_button_flank[1])
+    try:
+        # Buttons auswerten
+        joystick_angle_button_flank = button_check(joystick_angle_button, joystick_angle_button_flank[1])
+        joystick_throttle_button_flank = button_check(joystick_throttle_button, joystick_throttle_button_flank[1])
 
-    # Fahrmodi umschalten
-    if joystick_angle_button_flank[0] and speed_mode < len(speed_modes) - 1:
-        speed_mode += 1
-    elif joystick_angle_button_flank[0] and speed_mode == len(speed_modes) - 1:
-        speed_mode = 0
+        # Fahrmodi umschalten
+        if joystick_angle_button_flank[0] and speed_mode < len(speed_modes) - 1:
+            speed_mode += 1
+        elif joystick_angle_button_flank[0] and speed_mode == len(speed_modes) - 1:
+            speed_mode = 0
 
-    max_throttle = speed_modes[speed_mode]
+        max_throttle = speed_modes[speed_mode]
 
-    # Werte einlesen
-    val_throttle = read_input_calc(joystick_throttle, send_val_throttle, 3, True)
-    send_val_throttle = int(val_throttle * max_throttle)
-    if 0 < send_val_throttle < 5:
-        send_val_throttle = 5
-    elif -5 < send_val_throttle < 0:
-        send_val_throttle = -5
+        # Werte einlesen
+        val_throttle = read_input_calc(joystick_throttle, send_val_throttle, 3, True)
+        send_val_throttle = int(val_throttle * max_throttle)
+        if 0 < send_val_throttle < 5:
+            send_val_throttle = 5
+        elif -5 < send_val_throttle < 0:
+            send_val_throttle = -5
 
-    send_val_angle = read_input_calc(joystick_angle, send_val_angle, 3, False)
+        send_val_angle = read_input_calc(joystick_angle, send_val_angle, 3, False)
 
-    # Werte an RC-Car senden
-    send_text = f"throttle:{int(send_val_throttle)},angle:{send_val_angle}"
-    en.send(mac_car, str(send_text), True)
+        # Werte an RC-Car senden
+        send_text = f"gas:{int(send_val_throttle)},angle:{send_val_angle}"
+        send_response = en.send(mac_car, str(send_text), True)
+        if not send_response:
+            raise Exception("Error sending data")
 
-    # Signalstärke überwachen
-    en.recv()
-    peers_table = en.peers_table
-    # if peers_table[mac_car]:
-    if mac_car in peers_table:
-        #  0 .. 60: sehr gut, 61 .. 69: gut, 70 .. 78: ausreichend
-        peer_signal_strength = -(peers_table[mac_car][0])
-        if 0 <= peer_signal_strength <= 69:
-            pic_signal = pictures.connection_3_16x16()
-        elif 70 <= peer_signal_strength <= 79:
-            pic_signal = pictures.connection_2_16x16()
-        elif 80 <= peer_signal_strength <= 85:
-            pic_signal = pictures.connection_1_16x16()
+        # Signalstärke überwachen
+        en.recv()
+        peers_table = en.peers_table
+        if not timer_connection:
+            timer_connection = time.time()
+        timer_expired = True if (timer_connection >= 2) else False
+        if mac_car in peers_table:
+            peer_signal_strength = -(peers_table[mac_car][0])
+            if timer_expired or first_cycle:
+                if 0 <= peer_signal_strength <= 80:
+                    pic_signal = pictures.connection_3_16x16()
+                elif 81 <= peer_signal_strength <= 90:
+                    pic_signal = pictures.connection_2_16x16()
+                else:
+                    pic_signal = pictures.connection_1_16x16()
+            connection = True
+            timer_connection = 0
+            first_cycle = False
         else:
             pic_signal = pictures.connection_0_16x16()
-    else:
+    # Bei fehlgeschlagener Verbindung
+    except Exception as e:
+        connection = False
         pic_signal = pictures.connection_0_16x16()
+    finally:
+        # Anzeige Display
+        oled.fill(0)
 
-    # Anzeige Display
-    oled.fill(0)
+        # Bei vorhandener Verbindung
+        if connection:
+            # Fahrmodus max. Geschwindigkeit
+            fb_tacho_max = framebuf.FrameBuffer(pictures.tacho_max_20x20(), 20, 20, framebuf.MONO_VLSB)
+            oled.blit(fb_tacho_max, 0, 0)
+            oled.text(f"{100*max_throttle:3} %", 22, 5, 1)
 
-    # Fahrmodus max. Geschwindigkeit
-    fb_tacho_max = framebuf.FrameBuffer(pictures.tacho_max_20x20(), 20, 20, framebuf.MONO_VLSB)
-    oled.blit(fb_tacho_max, 0, 0)
-    oled.text(f"{100*max_throttle:3} %", 22, 5, 1)
+            # Aktuelle Geschwindigkeit
+            fb_tacho = framebuf.FrameBuffer(pictures.tacho_30x30(), 30, 30, framebuf.MONO_VLSB)
+            oled.blit(fb_tacho, 30, 28)
+            oled.text(f"{val_throttle:4} %", 64, 40, 1)
+        # Bei keiner Verbindung
+        else:
+            # Text Verbinde...
+            oled.text("Verbinde...", 24, 30, 1)
 
-    # Verbindung
-    fb_connection = framebuf.FrameBuffer(pic_signal, 16, 16, framebuf.MONO_VLSB)
-    oled.blit(fb_connection, 111, 1)
+        # Verbindung
+        fb_connection = framebuf.FrameBuffer(pic_signal, 16, 16, framebuf.MONO_VLSB)
+        oled.blit(fb_connection, 111, 1)
 
-    # Aktuelle Geschwindigkeit
-    fb_tacho = framebuf.FrameBuffer(pictures.tacho_30x30(), 30, 30, framebuf.MONO_VLSB)
-    oled.blit(fb_tacho, 30, 28)
-    oled.text(f"{val_throttle:4} %", 64, 40, 1)
-
-    oled.show()
+        oled.show()

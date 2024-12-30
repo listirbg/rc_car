@@ -196,6 +196,26 @@ Software Workaround bei Initialisierung PWM-Pin
 - Siehe git history
 
 
+## Woche 10 (KW52: 23.12. - 29.12.2024)
+
+### Aktivitäten:
+- Software erweitert und optimiert (Marcel List)
+- Testfahrt durchgeführt (alle)
+- gebrochenes Gehäuse geklebt (Timo Weber)
+- Abschirmung an Motor und ESC angebracht (alle)
+- Konzept für Werbevideo überlegt (alle)
+
+### Probleme und Lösungen:
+- Verbindungsreichweite nicht zufriedenstellend →
+Softwareoptimierung (WLAN-Modus, automatische Wiederverbindung)
+- Auto fährt bei Verbindungsabbruch weiter → Softwareanpassungen
+(Erkennung Verbindungsabbruch, dann Lenkung gerade und anhalten)
+- Verbindungsanzeige schwankt stark → Aktualisierung nur in Intervallen, Werte angepasst
+
+### Code:
+- Siehe git history
+
+
 ## Quellen:
 - Programmierung Micropython: https://docs.micropython.org/en/latest/esp32/quickref.html#
 - ESP-Now: https://docs.micropython.org/en/latest/library/espnow.html
@@ -206,6 +226,7 @@ Software Workaround bei Initialisierung PWM-Pin
 - Schaltung zum Laden des Akkus vom Controller: https://easyeda.com/editor#id=19d85904554e4ffea163c9be46c52993
 - Ansteuerung Motor über ESC: https://www.mikrocontroller.net/topic/354528
 - Startup-Sound: https://pixabay.com/sound-effects/lambo-start-up-sound-26364/
+- WiFi Long Range Mode: https://github.com/orgs/micropython/discussions/11573
 
 
 ### Chat-GPT Prompts:
@@ -228,3 +249,7 @@ mit SH1106-Treiber anzuzeigen?
 
 Was kann es bedeuten, wenn der ESC unseres Brushless DC Motors immer wieder piept
 und der Motor nicht funktioniert?
+
+- Reichweite ESP-Now verbessern:
+
+Wie kann ich die Reichweite von ESP-NOW ohne zusätzliche Hardware steigern?
